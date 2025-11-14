@@ -1,0 +1,36 @@
+﻿@page "/"
+@using BlazorApp.Auth
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavMgr
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="alert alert-success">
+            <h3>Welcome, @(context.User.Identity?.Name ?? "User")!</h3>
+            <p>You are logged in.</p>
+            <button @onclick="Logout" class="btn btn-warning">Logout</button>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-warning">
+            <p>Please log in to access all features.</p>
+            <button @onclick='() => NavMgr.NavigateTo("login")' class="btn btn-outline-primary">
+                Go to Login
+            </button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+Welcome to your new app.
+
+@code {
+    private void Logout()
+    {
+        ((SimpleAuthProvider)AuthProvider).Logout();
+        NavMgr.NavigateTo("/", forceLoad: true);
+    }
+}

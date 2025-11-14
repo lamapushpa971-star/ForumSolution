@@ -1,0 +1,161 @@
+@page "/post/{PostId:int}"
+@using ApiContracts.DTO
+@inject IPostService PostService
+@inject ICommentService CommentService
+@inject NavigationManager Navigation
+
+<h3>Post Details</h3>
+
+@if (_isLoading)
+{
+    <p>Loading post...</p>
+}
+else if (_errorMessage != null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+else if (_post == null)
+{
+    <p>Post not found.</p>
+}
+else
+{
+    <div class="post-details card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">@_post.Title</h2>
+            <p class="card-text">@_post.Content</p>
+            <p class="text-muted">By: @_post.AuthorName</p>
+        </div>
+    </div>
+
+    <div class="comments-section card">
+        <div class="card-header">
+            <h4>Comments</h4>
+        </div>
+        <div class="card-body">
+            @if (_post.Comments != null && _post.Comments.Any())
+            {
+                foreach (var comment in _post.Comments)
+                {
+                    <div class="comment card mb-2">
+                        <div class="card-body">
+                            <p class="card-text">@comment.Content</p>
+                            <p class="text-muted small">By: @comment.Username</p>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>No comments yet. Be the first to comment!</p>
+            }
+
+            <!-- Add Comment Form -->
+            <div class="add-comment mt-4">
+                <h5>Add Comment</h5>
+                <textarea @bind="_newCommentBody" class="form-control" rows="3" placeholder="Write your comment..."></textarea>
+                <button class="btn btn-primary mt-2" @onclick="AddComment">Add Comment</button>
+                
+                <!-- Debug Info -->
+                <div class="mt-2">
+                    <small class="text-muted">Debug: Comment length: @_newCommentBody.Length</small>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(_commentError))
+                {
+                    <div class="alert alert-danger mt-2">@_commentError</div>
+                }
+                @if (_showSuccess)
+                {
+                    <div class="alert alert-success mt-2">Comment submitted successfully!</div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<button class="btn btn-secondary mt-3" @onclick="BackToPosts">Back to Posts</button>
+
+@code {
+    [Parameter] 
+    public int PostId { get; set; }
+
+    private PostDto? _post;
+    private string _newCommentBody = string.Empty;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _commentError;
+    private bool _showSuccess = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadPost();
+    }
+
+    private async Task LoadPost()
+    {
+        try
+        {
+            _post = await PostService.GetPostAsync(PostId);
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load post: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task AddComment()
+    {
+        Console.WriteLine($"AddComment called. Content: '{_newCommentBody}', Length: {_newCommentBody.Length}");
+        
+        if (string.IsNullOrWhiteSpace(_newCommentBody))
+        {
+            _commentError = "Please enter a comment";
+            _showSuccess = false;
+            StateHasChanged();
+            return;
+        }
+
+        _commentError = null;
+        _showSuccess = false;
+        
+        try
+        {
+            Console.WriteLine("Creating CreateCommentDto...");
+            var comment = new CreateCommentDto 
+            { 
+                Content = _newCommentBody, 
+                PostId = PostId 
+            };
+            
+            Console.WriteLine("Calling CommentService.AddCommentAsync...");
+            await CommentService.AddCommentAsync(comment);
+            Console.WriteLine("Comment service call completed");
+            
+            _newCommentBody = string.Empty;
+            _showSuccess = true;
+            
+            Console.WriteLine("Reloading post to show new comment...");
+            await LoadPost(); // Reload to show the new comment
+            Console.WriteLine("Post reload completed");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            _commentError = $"Failed to add comment: {ex.Message}";
+            _showSuccess = false;
+        }
+        
+        StateHasChanged();
+    }
+
+    private void BackToPosts()
+    {
+        Navigation.NavigateTo("/posts");
+    }
+}

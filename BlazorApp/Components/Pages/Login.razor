@@ -1,0 +1,60 @@
+@page "/login"
+@using BlazorApp.Auth
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager NavMgr
+
+<PageTitle>Login</PageTitle>
+
+<h3>Login</h3>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <div class="login-form">
+            <div class="form-group">
+                <label>User name:</label>
+                <input type="text" @bind="userName" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" @bind="password" class="form-control" />
+            </div>
+            @if (!string.IsNullOrEmpty(errorLabel))
+            {
+                <div class="alert alert-danger">@errorLabel</div>
+            }
+            <button @onclick="LoginAsync" class="btn btn-primary">Log in</button>
+        </div>
+    </NotAuthorized>
+    <Authorized>
+        <div class="alert alert-info">
+            <h3>Hello, @context.User.Identity.Name!</h3>
+            <p>You are already logged in.</p>
+            <button @onclick="GoToHome" class="btn btn-secondary">Go to Home</button>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string userName = "";
+    private string password = "";
+    private string errorLabel = "";
+
+    private async Task LoginAsync()
+    {
+        errorLabel = "";
+        try
+        {
+            await ((SimpleAuthProvider)AuthProvider).LoginAsync(userName, password);
+            NavMgr.NavigateTo("/");
+        }
+        catch (Exception e)
+        {
+            errorLabel = $"Error: {e.Message}";
+        }
+    }
+
+    private void GoToHome()
+    {
+        NavMgr.NavigateTo("/");
+    }
+}
