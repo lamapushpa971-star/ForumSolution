@@ -1,0 +1,128 @@
+@page "/posts"
+@using ApiContracts.DTO
+@inject IPostService PostService
+@inject NavigationManager Navigation
+
+<h3>All Posts</h3>
+
+@if (_isLoading)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading posts...</p>
+    </div>
+}
+else if (_errorMessage != null)
+{
+    <div class="alert alert-danger">
+        <h4>Error Loading Posts</h4>
+        <p>@_errorMessage</p>
+        <button class="btn btn-outline-danger btn-sm" @onclick="LoadPosts">Try Again</button>
+    </div>
+}
+else if (!_posts.Any())
+{
+    <div class="alert alert-info">
+        <h4>No Posts Yet</h4>
+        <p>Be the first to create a post in our forum!</p>
+        <button class="btn btn-primary" @onclick="CreateNewPost">Create First Post</button>
+    </div>
+}
+else
+{
+    <div class="posts-list">
+        @foreach (var post in _posts)
+        {
+            <div class="post-item card mb-3" @onclick="() => ViewPost(post.Id)" style="cursor: pointer;">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">@post.Title</h5>
+                    @if (!string.IsNullOrEmpty(post.AuthorName))
+                    {
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> By: @post.AuthorName
+                            </small>
+                        </p>
+                    }
+                    else if (post.UserId > 0)
+                    {
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> By: User @post.UserId
+                            </small>
+                        </p>
+                    }
+                    @if (post.CreatedAt != DateTime.MinValue)
+                    {
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> Posted on: @post.CreatedAt.ToString("MMM dd, yyyy")
+                            </small>
+                        </p>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<div class="mt-4">
+    <button class="btn btn-primary" @onclick="CreateNewPost">
+        <i class="bi bi-plus-circle"></i> Create New Post
+    </button>
+    <button class="btn btn-outline-secondary" @onclick="AddNewUser">
+        <i class="bi bi-person-plus"></i> Add New User
+    </button>
+    <button class="btn btn-outline-info" @onclick="LoadPosts">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+</div>
+
+@code {
+    private List<PostDto> _posts = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPosts();
+    }
+
+    private async Task LoadPosts()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged(); // Force UI update
+
+        try
+        {
+            _posts = await PostService.GetPostsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load posts: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged(); // Force UI update
+        }
+    }
+
+    private void ViewPost(int postId)
+    {
+        Navigation.NavigateTo($"/post/{postId}");
+    }
+
+    private void CreateNewPost()
+    {
+        Navigation.NavigateTo("/create-post");
+    }
+
+    private void AddNewUser()
+    {
+        Navigation.NavigateTo("/create-user");
+    }
+}
